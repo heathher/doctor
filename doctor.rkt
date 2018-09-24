@@ -1,0 +1,162 @@
+; заготовка "Доктора". Март 2018
+#lang scheme/base
+; В учебных целях используется базовая версия Scheme
+
+; основная функция, запускающая "Доктора"
+; параметр name -- имя пациента
+(define (visit-doctor stopword count)
+  
+  (cond ((= count 0)(print '(see you next week)))
+        (else (let ((patient-name (ask-patient-name)))
+              (cond ((equal? patient-name stopword)
+                  (print '(go home)))
+                  (else (printf "Hello, ~a!\n" patient-name)
+                        (println '(what seems to be the trouble?))
+                        (doctor-driver-loop patient-name '())
+                        (visit-doctor stopword (- count 1))
+                        ))
+       )))
+)
+
+; функция ввода имени пациента
+(define (ask-patient-name)
+  (begin
+    (println '(next!))
+    (println '(who are you?))
+    (print '**)
+    (car (read))
+ ) 
+)
+
+; цикл диалога Доктора с пациентом
+; параметр name -- имя пациента
+(define (doctor-driver-loop name answers-list)
+    (newline)
+    (print '**) ; доктор ждёт ввода реплики пациента, приглашением к которому является **
+    (let ((user-response (read)))
+      (cond 
+	    ((equal? user-response '(goodbye)) ; реплика '(goodbye) служит для выхода из цикла
+             (printf "Goodbye, ~a!\n" name))
+            (else (print (reply2 user-response answers-list)) ; иначе Доктор генерирует ответ, печатает его и продолжает цикл
+                  (doctor-driver-loop name (check-list user-response answers-list))
+             )
+       )
+      )
+)
+
+; генерация ответной реплики по user-response -- реплике от пользователя 
+(define (reply user-response)
+      (cond ((fifty-fifty) ; с равной вероятностью выбирается один из двух способов построения ответа
+               (qualifier-answer user-response)) ; 1й способ
+            (else (hedge))  ; 2й способ
+      )
+)
+
+; упражнение №4: новый reply
+(define (reply2 user-response answers-list)
+      (case (random 3)
+              ((0) (qualifier-answer user-response))
+              ((1) (hedge))
+              ((2) (if (null? answers-list) (reply2 user-response answers-list) (history-answer answers-list))))
+)
+
+; возвращает #f с вероятностью 1/2 либо #t с вероятностью 1/2
+(define (fifty-fifty)
+  (= (random 2) 0)
+)
+			
+; 1й способ генерации ответной реплики -- замена лица в реплике пользователя и приписывание к результату нового начала
+(define (qualifier-answer user-response)
+        (append (pick-random '((you seem to think that)
+                               (you feel that)
+                               (why do you believe that)
+                               (why do you say that)
+                               (you think that)         ; моя подстановка №1 
+                               (why do you think that)  ; моя подстановка №2
+                               (why do you feel that)   ; моя подстановка №3
+                               )  
+                )
+                (change-person user-response)
+        )
+ )
+
+; случайный выбор одного из элементов списка lst
+(define (pick-random lst)
+  (list-ref lst (random (length lst)))
+)
+
+; замена лица во фразе			
+(define (change-person phrase)
+        (many-replace3 '((am are)
+                        (are am)
+                        (i you)
+                        (me you)
+                        (mine yours)
+                        (my your)
+			(myself yourself)
+                        (you i)
+                        (your my)
+                        (yours mine)
+			(yourself myself))
+                      phrase)
+ )
+  
+; осуществление всех замен в списке lst по ассоциативному списку replacement-pairs
+(define (many-replace replacement-pairs lst)
+        (cond ((null? lst) lst)
+              (else (let ((pat-rep (assoc (car lst) replacement-pairs))) ; Доктор ищет первый элемент списка в ассоциативном списке замен
+                      (cons (if pat-rep (cadr pat-rep) ; если поиск был удачен, то в начало ответа Доктор пишет замену
+                                (car lst) ; иначе в начале ответа помещается начало списка без изменений
+                            )
+                            (many-replace replacement-pairs (cdr lst)) ; рекурсивно производятся замены в хвосте списка
+                        )
+                     )
+               )
+         )
+  )
+
+; упражнение №2
+(define (many-replace2 replacement-pairs lst)
+        (define (loop replacement-pairs lst result)
+           (cond ((null? lst) (reverse result))
+                 (else (let ((pat-rep (assoc (car lst) replacement-pairs)))
+                         (loop replacement-pairs (cdr lst) (cons (if pat-rep (cadr pat-rep) (car lst)) result))))))
+         (loop replacement-pairs lst '()))
+
+; упражнение #3
+(define (many-replace3 replacement-pairs lst)
+         (cond ((null? lst) lst)
+               (else (map
+                      (lambda (x) (let ((pat-rep (assoc x replacement-pairs)))
+                                    (if pat-rep
+                                        (cadr pat-rep)
+                                        x)))
+                      lst
+                      )
+               )
+         )
+)
+
+; 2й способ генерации ответной реплики -- случайный выбор одной из заготовленных фраз, не связанных с репликой пользователя
+(define (hedge)
+       (pick-random '((please go on)
+                       (many people have the same sorts of feelings)
+                       (many of my patients have told me the same thing)
+                       (please continue)
+                       (you are not alone)   ; моя подстановка №1
+                       (tell me more)   ; моя подстановка №2
+                       (think about it)   ; моя подстановка №3
+                       )
+         )
+)
+
+; Упражнение №4: 3й способ ответной реплики
+(define (history-answer answers-list)
+        (append '(earlier you said that) (pick-random answers-list))
+)
+
+(define (check-list elem lst)
+  (if (member elem lst) lst
+      (cons elem lst))
+  )
+
