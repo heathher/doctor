@@ -5,17 +5,22 @@
 ; основная функция, запускающая "Доктора"
 ; параметр name -- имя пациента
 (define (visit-doctor stopword count)
-  
-  (cond ((= count 0)(print '(see you next week)))
-        (else (let ((patient-name (ask-patient-name)))
-              (cond ((equal? patient-name stopword)
-                  (print '(go home)))
-                  (else (printf "Hello, ~a!\n" patient-name)
+  (if (= count 0)(print '(see you next week))                    
+        (begin (let ((patient-name (ask-patient-name)))
+              (if (equal? patient-name stopword)                 
+                  (print '(go home))
+                  (begin (printf "Hello, ~a!\n" patient-name)
                         (println '(what seems to be the trouble?))
                         (doctor-driver-loop patient-name '())
                         (visit-doctor stopword (- count 1))
                         ))
        )))
+)
+
+(define (visit-doctor2 name)
+  (printf "Hello, ~a!\n" name)
+  (print '(what seems to be the trouble?))
+  (doctor-driver-loop name '())
 )
 
 ; функция ввода имени пациента
@@ -37,27 +42,20 @@
       (cond 
 	    ((equal? user-response '(goodbye)) ; реплика '(goodbye) служит для выхода из цикла
              (printf "Goodbye, ~a!\n" name))
-            (else (print (reply2 user-response answers-list)) ; иначе Доктор генерирует ответ, печатает его и продолжает цикл
+            (else (print (reply user-response answers-list)) ; иначе Доктор генерирует ответ, печатает его и продолжает цикл
                   (doctor-driver-loop name (check-list user-response answers-list))
              )
        )
       )
 )
 
-; генерация ответной реплики по user-response -- реплике от пользователя 
-(define (reply user-response)
-      (cond ((fifty-fifty) ; с равной вероятностью выбирается один из двух способов построения ответа
-               (qualifier-answer user-response)) ; 1й способ
-            (else (hedge))  ; 2й способ
-      )
-)
 
 ; упражнение №4: новый reply
-(define (reply2 user-response answers-list)
+(define (reply user-response answers-list)
       (case (random 3)
               ((0) (qualifier-answer user-response))
               ((1) (hedge))
-              ((2) (if (null? answers-list) (reply2 user-response answers-list) (history-answer answers-list))))
+              ((2) (if (null? answers-list) (hedge) (history-answer answers-list))))
 )
 
 ; возвращает #f с вероятностью 1/2 либо #t с вероятностью 1/2
@@ -125,16 +123,13 @@
 
 ; упражнение #3
 (define (many-replace3 replacement-pairs lst)
-         (cond ((null? lst) lst)
-               (else (map
-                      (lambda (x) (let ((pat-rep (assoc x replacement-pairs)))
+         (map  (lambda (x) (let ((pat-rep (assoc x replacement-pairs)))
                                     (if pat-rep
                                         (cadr pat-rep)
                                         x)))
                       lst
                       )
-               )
-         )
+               
 )
 
 ; 2й способ генерации ответной реплики -- случайный выбор одной из заготовленных фраз, не связанных с репликой пользователя
@@ -159,4 +154,43 @@
   (if (member elem lst) lst
       (cons elem lst))
   )
+
+; Упражнение №6
+(define keys '( 
+  (
+    (depressed suicide exams university)
+    (
+	  (when you feel depressed, go out for ice cream)
+      (depression is a disease that can be treated)
+	)
+  )
+  (
+    (mother father parents brother sister uncle ant grandma grandpa)
+    (
+	  (tell me more about your * , i want to know all about your *)
+      (why do you feel that way about your * ?)
+	)
+  )
+  (
+    (university scheme lections)
+	(
+	  (your education is important)
+	  (how many time do you spend to learning ?)
+	)
+  )
+))
+
+;(println (car (car keys)))
+
+(define (find-in-keys phrase keys-list)
+  (ormap (lambda(x) (if (member x keys-list) #t #f)) phrase))
+
+(define (answer-for-keywords phrase)
+  (define (helper block)
+    (let ((keys (car block)))
+      '())
+  )
+  (helper (car keys))
+)
+
 
